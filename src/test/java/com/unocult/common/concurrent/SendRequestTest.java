@@ -1,15 +1,11 @@
-package com.unocult.common.common.concurrent;
+package com.unocult.common.concurrent;
 
-import com.unocult.common.concurrent.ConcurrentSystem;
-import com.unocult.common.concurrent.LWActor;
-import com.unocult.common.concurrent.LWActorRef;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.SynchronousQueue;
 
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
 public class SendRequestTest {

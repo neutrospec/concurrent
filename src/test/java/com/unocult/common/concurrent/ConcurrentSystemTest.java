@@ -1,8 +1,5 @@
-package com.unocult.common.common.concurrent;
+package com.unocult.common.concurrent;
 
-import com.unocult.common.concurrent.ConcurrentSystem;
-import com.unocult.common.concurrent.LWActor;
-import com.unocult.common.concurrent.LWActorRef;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
@@ -77,7 +74,7 @@ public class ConcurrentSystemTest {
         logger.info("Control: " + CALL_COUNT + " in " + (end - start));
     }
 
-    static class MyActor extends LWActor {
+    public static class MyActor extends LWActor {
         @Override
         protected void preStart() {
             logger.info("MyActor pre-start");
@@ -90,7 +87,7 @@ public class ConcurrentSystemTest {
         }
     }
 
-    static class AnotherActor extends LWActor {
+    public static class AnotherActor extends LWActor {
         @Override
         protected void preStart() {
             logger.info("AnotherActor pre-start");
@@ -102,7 +99,7 @@ public class ConcurrentSystemTest {
         }
     }
 
-    static class MyArgActor extends LWActor {
+    public static class MyArgActor extends LWActor {
         private String name;
 
         public MyArgActor(String name) {

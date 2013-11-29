@@ -1,8 +1,8 @@
-package com.unocult.common.common.concurrent.io;
-import com.miracom.common.base.Optional;
-import com.miracom.common.concurrent.ConcurrentSystem;
-import com.miracom.common.concurrent.LWActor;
-import com.miracom.common.concurrent.LWActorRef;
+package com.unocult.common.concurrent.io;
+import com.unocult.common.base.Optional;
+import com.unocult.common.concurrent.ConcurrentSystem;
+import com.unocult.common.concurrent.LWActor;
+import com.unocult.common.concurrent.LWActorRef;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.SynchronousQueue;
-
-import static org.junit.Assert.*;
 
 public class TCPTest {
     private static final Logger logger = LoggerFactory.getLogger(TCPTest.class);
