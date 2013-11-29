@@ -73,7 +73,7 @@ public class SendRequestTest {
                     try {
                         q.put("timeout");
                     } catch (Exception e) {
-                        logger.error(e);
+                        logger.error("error", e);
                     }
                 }
 
