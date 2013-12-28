@@ -1,8 +1,5 @@
 package com.unocult.common.concurrent.io.nio;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
@@ -15,8 +12,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 abstract public class AbstractSelector implements Runnable {
-	private static Logger log = LoggerFactory.getLogger("com.miracom.oneoone.nio.AbstractSelector");
+	private static Logger log = LoggerFactory.getLogger("com.unocult.oneoone.nio.AbstractSelector");
     protected static int socketReceiveBufferSize = 32 * Constants.KBYTE;
     protected Selector selector;
     protected boolean run;

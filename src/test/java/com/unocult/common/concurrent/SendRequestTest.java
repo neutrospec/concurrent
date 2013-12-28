@@ -1,15 +1,13 @@
 package com.unocult.common.concurrent;
 
+import org.apache.log4j.Logger;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.junit.Assert.*;
 
 import java.util.concurrent.SynchronousQueue;
 
-import static org.junit.Assert.assertEquals;
-
 public class SendRequestTest {
-    private static final Logger logger = LoggerFactory.getLogger(SendRequestTest.class);
+    private static final Logger logger = Logger.getLogger(SendRequestTest.class);
     private static SynchronousQueue<String> q = new SynchronousQueue<String>();
     private static LWActorRef client;
     private static LWActorRef server;
@@ -46,7 +44,7 @@ public class SendRequestTest {
         @Override
         protected boolean receive(Object message) {
             logger.info("client received message: " + message);
-            logger.info("sender: {}", sender.isPresent());
+            logger.info("sender: " + sender.isPresent());
             sendRequest(server, message, new ReplyHandler() {
                 @Override
                 public boolean isValidReply(Object reply) {
@@ -69,7 +67,7 @@ public class SendRequestTest {
                     try {
                         q.put("timeout");
                     } catch (Exception e) {
-                        logger.error("error", e);
+                        logger.error(e);
                     }
                 }
 
@@ -85,7 +83,7 @@ public class SendRequestTest {
     static class Server extends LWActor {
         @Override
         protected boolean receive(Object message) {
-            logger.info("sender: {}", sender.isPresent());
+            logger.info("sender: " + sender.isPresent());
             logger.info("server received message: " + message);
             if ("do not reply".equals(message)) {
                 logger.info("we have to make timeout");

@@ -2,6 +2,8 @@ package com.unocult.common.concurrent.io;
 
 import com.unocult.common.concurrent.LWActorRef;
 
+import java.net.InetSocketAddress;
+
 public class ClientEntry {
     public final LWActorRef actor;
     public final TCP.Connect connect;

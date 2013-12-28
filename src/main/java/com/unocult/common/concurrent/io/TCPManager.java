@@ -5,7 +5,9 @@ import com.unocult.common.concurrent.LWActor;
 import com.unocult.common.concurrent.LWActorRef;
 import com.unocult.common.concurrent.io.message.Connected;
 import com.unocult.common.concurrent.io.message.ConnectionClosed;
+import com.unocult.common.concurrent.io.message.ConnectionFailed;
 import com.unocult.common.concurrent.io.nio.Address;
+import com.unocult.common.concurrent.io.nio.Connection;
 import com.unocult.common.concurrent.io.nio.ConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,7 @@ public class TCPManager extends LWActor {
 
     @Override
     protected boolean receive(Object message) {
+        logger.debug("Received: {}", message);
         if (message instanceof TCP.Bind) {
             bind((TCP.Bind) message);
         } else if (message instanceof TCP.Connect) {
@@ -45,6 +48,8 @@ public class TCPManager extends LWActor {
             connected((Connected) message);
         } else if (message instanceof ConnectionClosed) {
             closed((ConnectionClosed) message);
+        } else if (message instanceof ConnectionFailed) {
+            connectionFailed((ConnectionFailed) message);
         } else {
             logger.error("unprocessed message: {}", message);
         }
@@ -59,6 +64,7 @@ public class TCPManager extends LWActor {
             servers.add(new BindListenerEntry(listener, m.bindAddress));
             listener.send(new TCP.Bound());
         } catch (Throwable t) {
+            logger.error("Bind error [{}]", m.bindAddress, t);
             listener.send(new TCP.CommandFailed(m, Optional.of(t)));
         }
     }
@@ -76,6 +82,16 @@ public class TCPManager extends LWActor {
                 clients.remove(client.get());
                 createTCPConnection(connected, client.get().actor);
             }
+        }
+    }
+
+    protected void connectionFailed(ConnectionFailed connectionFailed) {
+        Optional<ClientEntry> client = findClient(connectionFailed.remote);
+        if (client.isAbsent()) {
+            logger.error("unexpected connection destroyed: -> [{}]", connectionFailed.remote);
+        } else {
+            clients.remove(client.get());
+            client.get().actor.send(new TCP.CommandFailed(client.get().connect, Optional.<Throwable>absent()));
         }
     }
 

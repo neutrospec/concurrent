@@ -11,6 +11,8 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.SynchronousQueue;
 
+import static org.junit.Assert.*;
+
 public class TCPTest {
     private static final Logger logger = LoggerFactory.getLogger(TCPTest.class);
     private static final SynchronousQueue<String> queue = new SynchronousQueue<String>();

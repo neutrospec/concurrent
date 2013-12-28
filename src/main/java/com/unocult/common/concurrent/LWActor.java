@@ -1,6 +1,7 @@
 package com.unocult.common.concurrent;
 
 import com.unocult.common.base.Optional;
+import com.unocult.common.base.Tuple2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,20 +10,23 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class LWActor {
     private static final Logger logger = LoggerFactory.getLogger(LWActor.class);
-    private MailBox mailBox;
     enum State {
         PreStart, Started, Stop
     }
     private State state = State.PreStart;
+
+    private long lastActivity = 0;
+    private Optional<Tuple2<Long, TimeUnit>> maximumIdleTimeout = Optional.absent();
+    private Optional<ScheduledFuture> maximumIdleTimeoutFuture = Optional.absent();
+    private long timeout = 0;
 
     protected LWActorRef self;
     protected Optional<LWActorRef> sender = Optional.absent();
     protected Optional<LWActorRef> parent = Optional.absent();
 
     protected long requestId = 0;
-    protected Optional<LWActor.ReplyHandler> replHandler = Optional.absent();
+    protected Optional<ReplyHandler> replHandler = Optional.absent();
     protected Optional<ScheduledFuture> timeoutTimer = Optional.absent();
-
     protected int errorCount = 0;
     protected Optional<Throwable> lastThrowable = Optional.absent();
 
@@ -31,9 +35,37 @@ public abstract class LWActor {
     protected void preStart() {};
     protected void postStop() {};
 
+    protected void setMaximumIdleTime(long time, TimeUnit unit) {
+        lastActivity = System.currentTimeMillis();
+        maximumIdleTimeout = Optional.of(new Tuple2<Long, TimeUnit>(time, unit));
+        ScheduledFuture future = self.getSystem().scheduleTimer(self, ConcurrentSystem.IdleTimeout, time, unit);
+        maximumIdleTimeoutFuture = Optional.of(future);
+        timeout = unit.toMillis(time);
+    }
+    private void scheduleMaximumIdleTime() {
+        if (maximumIdleTimeout.isPresent()) {
+            long passed = System.currentTimeMillis() - lastActivity;
+            long next = timeout;
+            if (passed >= timeout) {
+                updateLastActivityTime();
+                receive_(ConcurrentSystem.IdleTimeout);
+            } else if (passed > 0 && passed < timeout) {
+                next = timeout - passed;
+            }
+            ScheduledFuture future = self.getSystem().scheduleTimer(self, ConcurrentSystem.IdleTimeout, next, TimeUnit.MILLISECONDS);
+            maximumIdleTimeoutFuture = Optional.of(future);
+        }
+    }
+    protected void cancelIdleTime() {
+        if (maximumIdleTimeoutFuture.isPresent()) {
+            maximumIdleTimeoutFuture.get().cancel(false);
+            maximumIdleTimeoutFuture = Optional.absent();
+        }
+    }
     boolean processMessage(Object message, Optional<LWActorRef> sender) {
         this.sender = sender;
         boolean result = true;
+
         switch (state) {
             case PreStart:
                 preStart();
@@ -42,6 +74,11 @@ public abstract class LWActor {
                     result = receive_(message);
                 break;
             case Started:
+                if (message == ConcurrentSystem.IdleTimeout) {
+                    scheduleMaximumIdleTime();
+                    break;
+                }
+                updateLastActivityTime();
                 // ignore unrelated message
                 if (message == ConcurrentSystem.PreStart) {
                     logger.warn("Prestart messaged received more than once");
@@ -110,11 +147,7 @@ public abstract class LWActor {
         this.parent = parent;
     }
 
-    void setMailBox(MailBox mbox) {
-        this.mailBox = mbox;
-    }
-
-    public final void sendRequest(LWActorRef dest, Object message, LWActor.ReplyHandler handler) {
+    public final void sendRequest(LWActorRef dest, Object message, ReplyHandler handler) {
         requestId ++;
 
         ScheduledFuture future = self.getSystem().scheduleTimer(self, new ConcurrentSystem.Timeout(requestId), handler.timeout(), TimeUnit.MILLISECONDS);
@@ -135,6 +168,9 @@ public abstract class LWActor {
         long timeout();
     }
 
+    private void updateLastActivityTime() {
+        lastActivity = System.currentTimeMillis();
+    }
     protected Optional<LWActorRef> getSender() {
         return sender;
     }

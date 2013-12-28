@@ -20,10 +20,16 @@ public class LWActorRef {
     protected Optional<LWActorRef> sender = Optional.absent();
     private Optional<LWActor> actorImpl = Optional.absent();
 
+    private final Lock childrenLock = new ReentrantLock();
     private final Lock watcherLock = new ReentrantLock();
+
+    @GuardedBy("childrenLock")
+    private List<LWActorRef> children = new LinkedList<LWActorRef>();
 
     @GuardedBy("watcherLock")
     private final List<LWActorRef> watchers = new LinkedList<LWActorRef>();
+
+    protected Optional<LWActorRef> parent = Optional.absent();
 
     // represent current operating LWActorRef
     protected static ThreadLocal<LWActorRef> callingActorRef = new ThreadLocal<LWActorRef>();
@@ -32,17 +38,23 @@ public class LWActorRef {
         this.system = system;
         this.mailBox = mailBox;
         this.props = props;
-
+        this.parent = LWActorRef.findSender();
         allocateActorImpl();
+        if (parent.isPresent())
+            parent.get().addChildren(this);
     }
 
     boolean processMessage(Object message, Optional<LWActorRef> sender) {
         boolean result = true;
-        callingActorRef.set(this);
-        // error processing point!!!
-        actorImpl.get().setSender(sender);
-        result = actorImpl.get().processMessage(message, sender);
-        callingActorRef.remove();
+        try {
+            callingActorRef.set(this);
+            // error processing point!!!
+            actorImpl.get().setSender(sender);
+            result = actorImpl.get().processMessage(message, sender);
+            callingActorRef.remove();
+        } catch (Exception e) {
+            logger.error("ACTOR SYSTEM", e);
+        }
         return result;
     }
 
@@ -83,6 +95,27 @@ public class LWActorRef {
         this.system = system;
     }
 
+    protected void addChildren(LWActorRef child) {
+        childrenLock.lock();
+        try {
+            if (!children.contains(child))
+                children.add(child);
+            else
+                logger.error("child actor register error: duplicated.");
+        } finally {
+            childrenLock.unlock();
+        }
+    }
+
+    protected void removeChild(LWActorRef child) {
+        childrenLock.lock();
+        try {
+            if (!children.remove(child))
+                logger.error("unregistered child error");
+        } finally {
+            childrenLock.unlock();
+        }
+    }
     protected void allocateActorImpl() {
         actorImpl = Optional.of(props.newInstance());
         actorImpl.get().setSelf(this);
@@ -95,11 +128,31 @@ public class LWActorRef {
             return Optional.of(callingActorRef.get());
     }
 
-    protected  void shutdown() {
+    protected void shutdown() {
         sendTerminateEventToWatchers();
+        callDoPostOnActorImpl();
+        shutdownAllChildActors();
+        if (parent.isPresent()) {
+            parent.get().removeChild(this);
+        }
+    }
+
+    private void callDoPostOnActorImpl() {
         // clean up!!!!
         if (actorImpl.isPresent()) {
+            actorImpl.get().cancelIdleTime();
             actorImpl.get().postStop();
+        }
+    }
+
+    private void shutdownAllChildActors() {
+        childrenLock.lock();
+        try {
+            for (LWActorRef child: children) {
+                child.stop();
+            }
+        } finally {
+            childrenLock.unlock();
         }
     }
 
