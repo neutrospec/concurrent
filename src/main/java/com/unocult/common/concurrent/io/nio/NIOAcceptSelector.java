@@ -20,6 +20,7 @@ public class NIOAcceptSelector extends AbstractSelector {
     }
 
     public boolean bind(InetSocketAddress bindAddress) throws IOException {
+        logger.debug("begin bind: {}", bindAddress);
         if (serverChannels.contains(bindAddress)) {
             throw new IOException("Bind address duplicated: " + bindAddress);
         }

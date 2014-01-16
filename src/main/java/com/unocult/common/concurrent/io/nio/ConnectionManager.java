@@ -1,5 +1,18 @@
 package com.unocult.common.concurrent.io.nio;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.util.List;
+import java.util.Queue;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.unocult.common.base.Optional;
 import com.unocult.common.concurrent.LWActorRef;
 import com.unocult.common.concurrent.io.message.Connected;
@@ -8,16 +21,6 @@ import com.unocult.common.concurrent.io.message.ConnectionFailed;
 import com.unocult.common.concurrent.io.message.SocketProblem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
-import java.util.List;
-import java.util.Vector;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class ConnectionManager {
 	private static Logger log = LoggerFactory.getLogger(ConnectionManager.class);
@@ -28,7 +31,8 @@ public class ConnectionManager {
     public static final int cpuCount = Runtime.getRuntime().availableProcessors();
     private SocketOption socketOption;
 
-    private NIOAcceptSelector acceptSelector;
+    private NIOAcceptSelector acceptSelector = new NIOAcceptSelector(this);
+
     private NIOInSelector[] selectors = new NIOInSelector[cpuCount];
     private NIOOutSelector outSelector;
 	
@@ -116,7 +120,7 @@ public class ConnectionManager {
             conn.setSocketReadBuffer(directBufferCache.getDirectByteBuffer(getSocketWriteFragmentSize()));
             connectionList.add(conn);
             // toss Connection to TCP manager.
-            owner.send(new Connected(conn, (InetSocketAddress) socketChannel.getRemoteAddress(), (InetSocketAddress) socketChannel.getLocalAddress()));
+            owner.send(new Connected(conn, (InetSocketAddress)socketChannel.getRemoteAddress(), (InetSocketAddress)socketChannel.getLocalAddress()));
             log.info("connection established - remote: {}", socketChannel.socket().getRemoteSocketAddress());
             return conn;
         } catch (IOException e) {

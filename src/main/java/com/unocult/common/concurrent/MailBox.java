@@ -88,6 +88,8 @@ class MailBox {
                     // error?
                     break;
             }
+        } catch (Exception e) {
+            logger.error("ACTOR SYSTEM", e);
         } finally {
             stateLock.unlock();
         }

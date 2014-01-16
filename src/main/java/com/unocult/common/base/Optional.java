@@ -1,8 +1,9 @@
 package com.unocult.common.base;
 
 import java.io.Serializable;
+import java.util.List;
 
-public class Optional<T> implements Serializable  {
+public class Optional<T> implements Serializable {
     private static final Optional ABSENT = new Optional(null);
     private T value;
 
@@ -40,5 +41,11 @@ public class Optional<T> implements Serializable  {
 
     public T orNull() {
         return orElse(null);
+    }
+
+    public List<T> toList() {
+        if (isAbsent())
+            return Nil.getNil();
+        return new SingleList<T>(get());
     }
 }

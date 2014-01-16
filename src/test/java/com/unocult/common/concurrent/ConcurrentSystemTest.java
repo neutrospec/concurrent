@@ -74,7 +74,7 @@ public class ConcurrentSystemTest {
         logger.info("Control: " + CALL_COUNT + " in " + (end - start));
     }
 
-    public static class MyActor extends LWActor {
+    static class MyActor extends LWActor {
         @Override
         protected void preStart() {
             logger.info("MyActor pre-start");
@@ -87,7 +87,7 @@ public class ConcurrentSystemTest {
         }
     }
 
-    public static class AnotherActor extends LWActor {
+    static class AnotherActor extends LWActor {
         @Override
         protected void preStart() {
             logger.info("AnotherActor pre-start");
@@ -99,7 +99,7 @@ public class ConcurrentSystemTest {
         }
     }
 
-    public static class MyArgActor extends LWActor {
+    static class MyArgActor extends LWActor {
         private String name;
 
         public MyArgActor(String name) {

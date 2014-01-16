@@ -5,20 +5,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
+import java.util.UUID;
 
 public class ActorProperty {
     private static final Logger logger = LoggerFactory.getLogger(ActorProperty.class);
+    protected String name;
+    private final UUID id;
     private Object[] args = null;
     private Class<? extends LWActor> klass;
     private Optional<LWActorRef> parent = Optional.absent();
 
-    public ActorProperty(Class<? extends LWActor> klass) {
-        this.klass = klass;
-        this.args = null;
-        parent = LWActorRef.findSender();
+    public ActorProperty(String name, Class<? extends LWActor> klass) {
+        this(name, klass, null);
     }
 
-    public ActorProperty(Class<? extends LWActor> klass, Object... args) {
+    public ActorProperty(String name, Class<? extends LWActor> klass, Object... args) {
+        id = UUID.randomUUID();
+        if (name == null)
+            name = id.toString();
+        this.name = name;
         this.klass = klass;
         this.args = args;
         parent = LWActorRef.findSender();
@@ -30,6 +35,18 @@ public class ActorProperty {
 
     public void setParent(Optional<LWActorRef> parent) {
         this.parent = parent;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public UUID getId() {
+        return id;
     }
 
     LWActor newInstance() {

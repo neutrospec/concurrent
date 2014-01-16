@@ -1,12 +1,5 @@
 package com.unocult.common.concurrent.io.nio;
 
-import com.unocult.common.base.Optional;
-import com.unocult.common.concurrent.LWActorRef;
-import com.unocult.common.concurrent.io.TCP;
-import com.unocult.common.concurrent.io.nio.buffer.DoubleBuffer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -21,6 +14,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import com.unocult.common.base.Optional;
+import com.unocult.common.concurrent.LWActorRef;
+import com.unocult.common.concurrent.io.TCP;
+import com.unocult.common.concurrent.io.nio.buffer.DoubleBuffer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Connection {
 	private static Logger log = LoggerFactory.getLogger(Connection.class);

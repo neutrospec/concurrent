@@ -1,6 +1,5 @@
 package com.unocult.common.concurrent.io;
 
-
 import com.unocult.common.concurrent.LWActorRef;
 
 import java.net.InetSocketAddress;

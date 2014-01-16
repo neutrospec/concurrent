@@ -24,13 +24,14 @@ public class TCP {
         ConcurrentSystem system = ConcurrentSystem.getConcurrentSystem();
         manager = system.actorOf(TCPManager.class);
     }
-    public static class Connect {
+    public interface TCPCommand {}
+    public static class Connect implements TCPCommand {
         public Connect(InetSocketAddress remote) {
             this.remote = remote;
         }
         public final InetSocketAddress remote;
     }
-    public static class Bind {
+    public static class Bind implements TCPCommand {
         public final LWActorRef actor;
         public final InetSocketAddress bindAddress;
         public Bind(LWActorRef actor, InetSocketAddress address) {
@@ -38,10 +39,10 @@ public class TCP {
             this.bindAddress = address;
         }
     }
-    public static class Bound {
+    public static class Bound implements TCPCommand {
 
     }
-    public static class CommandFailed {
+    public static class CommandFailed implements TCPCommand {
         public final Object command;
         public final Optional<Throwable> cause;
         public CommandFailed(Object command, Optional<Throwable> cause) {
@@ -49,7 +50,7 @@ public class TCP {
             this.cause = cause;
         }
     }
-    public static class Connected {
+    public static class Connected implements TCPCommand {
         public final InetSocketAddress remote;
         public final InetSocketAddress local;
 
@@ -58,10 +59,10 @@ public class TCP {
             this.local = local;
         }
     }
-    public static class Close {
+    public static class Close implements TCPCommand {
 
     }
-    public static class Closed {
+    public static class Closed implements TCPCommand {
         public final InetSocketAddress remote;
         public final InetSocketAddress local;
 
@@ -70,28 +71,28 @@ public class TCP {
             this.local = local;
         }
     }
-    public static class Register {
+    public static class Register implements TCPCommand {
         public final LWActorRef actor;
         public Register(LWActorRef actor) {
             this.actor = actor;
         }
     }
 
-    public static class Received {
+    public static class Received implements TCPCommand {
         public final ByteBuffer data;
         public Received(ByteBuffer data) {
             this.data = data;
         }
     }
 
-    public static class Write {
+    public static class Write implements TCPCommand {
         public final ByteBuffer data;
         public Write(ByteBuffer data) {
             this.data = data;
         }
     }
 
-    public static class WriteAck {
+    public static class WriteAck implements TCPCommand {
         public final Write data;
         public WriteAck(Write data) {
             this.data = data;
