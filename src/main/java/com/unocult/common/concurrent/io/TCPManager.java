@@ -88,19 +88,20 @@ public class TCPManager extends LWActor {
     protected void connectionFailed(ConnectionFailed connectionFailed) {
         Optional<ClientEntry> client = findClient(connectionFailed.remote);
         if (client.isAbsent()) {
-            logger.error("unexpected connection destroyed: -> [{}]", connectionFailed.remote);
+            logger.error("connection without owner failed: -> [{}]", connectionFailed.remote);
         } else {
             clients.remove(client.get());
-            client.get().actor.send(new TCP.CommandFailed(client.get().connect, Optional.<Throwable>absent()));
+            client.get().actor.send(new TCP.CommandFailed(client.get().connect, connectionFailed.cause));
         }
     }
 
     protected void closed(ConnectionClosed message) {
+        /*
         Optional<BindListenerEntry> server = findServer(message.connection.local);
         if (server.isPresent()) {
             servers.remove(server);
             logger.info("Server socket closed: {}", message.connection.local);
-        } else {
+        } else { */
             Optional<ClientEntry> client = findClient(message.connection.remote);
             if (client.isPresent()) {
                 logger.warn("Connection connection received unexpected close event: {}", client.get().connect.remote);
@@ -112,7 +113,7 @@ public class TCPManager extends LWActor {
                 entry.tcpConnection.send(new TCP.Closed(message.connection.remote, message.connection.local));
                 logger.debug("connection [{} {}] closed", entry.connection.getConnectionID(), entry.connection.remote);
             }
-        }
+        /* } */
     }
     protected void connect(TCP.Connect message) {
         try {

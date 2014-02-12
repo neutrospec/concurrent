@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 abstract public class AbstractSelector implements Runnable {
-	private static Logger log = LoggerFactory.getLogger("com.unocult.oneoone.nio.AbstractSelector");
+	private static Logger log = LoggerFactory.getLogger(AbstractSelector.class);
     protected static int socketReceiveBufferSize = 32 * Constants.KBYTE;
     protected Selector selector;
     protected boolean run;

@@ -11,9 +11,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class TCPConnection extends LWActor {
     private static final Logger logger = LoggerFactory.getLogger(TCPConnection.class);
+    private static final String CLOSE_NOW = "close.now";
+
     private final Connection connection;
     private final LWActorRef requester;
     private final ConnectionManager connectionManager;
@@ -22,6 +26,10 @@ public class TCPConnection extends LWActor {
     protected boolean listenerDead = false;
     private InetSocketAddress remote;
     private InetSocketAddress local;
+
+    private Optional<Object> pendingClose = Optional.absent();
+    private Optional<ScheduledFuture> closeFuture = Optional.absent();
+    private int pendingWrite = 0;
 
     public TCPConnection(ConnectionManager connectionManager, Connected connected, LWActorRef ref) {
         this.requester = ref;
@@ -41,7 +49,10 @@ public class TCPConnection extends LWActor {
     @Override
     protected boolean receive(Object message) {
         logger.debug("CM: {}", message);
-        if (message instanceof TCP.Register) {
+        if (message == CLOSE_NOW) {
+            closeFuture = Optional.absent();
+            connection.close();
+        } else if (message instanceof TCP.Register) {
             register((TCP.Register) message);
         } else if (message instanceof TCP.Write) {
             write((TCP.Write) message);
@@ -52,7 +63,9 @@ public class TCPConnection extends LWActor {
         } else if (message instanceof TCP.Closed) {
             closed((TCP.Closed) message);
         } else if (message instanceof TCP.Close) {
-            closeConn((TCP.Close) message);
+            forceClose();
+        } else if (message instanceof TCP.CloseSafe) {
+            closeConnSafe((TCP.CloseSafe) message);
         } else if (message instanceof ConcurrentSystem.Terminated) {
             closeConn((ConcurrentSystem.Terminated) message);
         } else {
@@ -67,12 +80,24 @@ public class TCPConnection extends LWActor {
         connectionManager.registerConnection(connection);
     }
     private void write(TCP.Write message) {
+        pendingWrite ++;
         connection.write(message);
     }
     private void sendWriteAck(TCP.WriteAck message) {
+        pendingWrite --;
         if (!sendToListener(message))
             logger.warn("received write ack from TCP connection without Register");
+        closeIfPendingResolved();
     }
+
+    private void closeIfPendingResolved() {
+        if (pendingClose.isPresent()) {
+            if (pendingWrite == 0) {
+                forceClose();
+            }
+        }
+    }
+
     private void read(TCP.Received message) {
         if (!sendToListener(message))
             logger.warn("received packet from TCP connection without Register!!");
@@ -89,13 +114,37 @@ public class TCPConnection extends LWActor {
         }
         return false;
     }
-    protected void closeConn(TCP.Close message) {
-        connection.close();
-        sendToListener(new TCP.Closed(remote, local));
+    protected void closeConnSafe(TCP.CloseSafe message) {
+        if (pendingClose.isPresent()) {
+            logger.warn("[{} - {}] is already closing phase", local, remote);
+            return;
+        }
+        if (connection.isConnected()) {
+            if (pendingWrite == 0) {
+                forceClose();
+            } else {
+                reserveCloseConn(message);
+            }
+        }
     }
     protected void closeConn(ConcurrentSystem.Terminated message) {
         listener = Optional.absent();
         listenerDead = true;
+        forceClose();
+    }
+
+    private void reserveCloseConn(Object message) {
+        logger.debug("[{} - {}] start closing phase ({})", local, remote, pendingWrite);
+        pendingClose = Optional.of(message);
+        closeFuture = Optional.of(self.getSystem().scheduleTimer(self, CLOSE_NOW, 200, TimeUnit.MILLISECONDS));
+    }
+
+    private void forceClose() {
+        if (closeFuture.isPresent()) {
+            closeFuture.get().cancel(false);
+        }
+        logger.debug("[{} - {}] close immediately", local, remote);
         connection.close();
+        pendingClose = Optional.absent();
     }
 }

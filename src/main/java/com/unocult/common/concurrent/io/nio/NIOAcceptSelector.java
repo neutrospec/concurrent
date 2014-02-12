@@ -16,10 +16,11 @@ public class NIOAcceptSelector extends AbstractSelector {
     private final Hashtable<InetSocketAddress, BindEntry> serverChannels = new Hashtable<InetSocketAddress, BindEntry>();
 
     public NIOAcceptSelector(ConnectionManager connectionManager) {
+        super();
         this.connectionManager = connectionManager;
     }
 
-    public boolean bind(InetSocketAddress bindAddress) throws IOException {
+    public boolean bind(final InetSocketAddress bindAddress) throws IOException {
         logger.debug("begin bind: {}", bindAddress);
         if (serverChannels.contains(bindAddress)) {
             throw new IOException("Bind address duplicated: " + bindAddress);
@@ -29,11 +30,24 @@ public class NIOAcceptSelector extends AbstractSelector {
         if (size > ConnectionManager.MIN_BUFFER_SIZE)
             channel.socket().setReceiveBufferSize(0); // FIXME: override default buffer?
         channel.bind(bindAddress);
+        logger.debug("after bind: {}", bindAddress);
         channel.configureBlocking(false);
-        SelectionKey key = channel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(channel));
-        BindEntry entry = new BindEntry(channel, key);
-        serverChannels.put(bindAddress, entry);
+        logger.debug("after blocking: {}", bindAddress);
+        addTask(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    SelectionKey key = channel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(channel));
+                    logger.debug("after register: {}", bindAddress);
+                    BindEntry entry = new BindEntry(channel, key);
+                    serverChannels.put(bindAddress, entry);
+                } catch (Throwable t) {
+
+                }
+            }
+        });
         selector.wakeup();
+        logger.debug("after wakeup: {}", bindAddress);
         logger.info("Ready to accept connections: receive buffer = " + channel.socket().getReceiveBufferSize());
         return true;
     }

@@ -16,6 +16,11 @@ public class DoubleBuffer {
         mode = Mode.None;
     }
 
+    public void clear() {
+        buffer.clear();
+        mode = Mode.None;
+    }
+
     public void beginWrite() {
         ensureNotInTransaction();
         buffer.position(writePosition);

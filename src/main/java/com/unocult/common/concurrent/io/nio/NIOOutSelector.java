@@ -9,13 +9,18 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
+import com.unocult.common.base.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NIOOutSelector extends AbstractSelector{
 	private static Logger log = LoggerFactory.getLogger(NIOOutSelector.class);
-	private List<ConnectWorker> workList = new Vector<ConnectWorker>();
+
+    private final Lock workLock = new ReentrantLock();
+    private List<ConnectWorker> workList = new Vector<ConnectWorker>();
 	
 	public NIOOutSelector(ConnectionManager connectionManager) {
 		this.connectionManager = connectionManager;
@@ -29,9 +34,21 @@ public class NIOOutSelector extends AbstractSelector{
 		ConnectWorker connectWorker = new ConnectWorker(address);
 		addTask(connectWorker);
 		selector.wakeup();
-		workList.add(connectWorker);
+        workLock.lock();
+        try {
+            workList.add(connectWorker);
+        } finally {
+            workLock.unlock();
+        }
 	}
-
+    private void removeWork(ConnectWorker worker) {
+        workLock.lock();
+        try {
+            workList.remove(worker);
+        } finally {
+            workLock.unlock();
+        }
+    }
     @Override
     protected void process(SelectionKey key) throws IOException {
         ConnectWorker worker = (ConnectWorker) key.attachment();
@@ -46,7 +63,7 @@ public class NIOOutSelector extends AbstractSelector{
 			if (!worker.isConnected() && worker.isTimeout()) {
 				worker.deregister();
 				it.remove();
-				connectionManager.onConnectionFailed(worker.address);
+				connectionManager.onConnectionFailed(worker.address, Optional.<Throwable>of(new IOException("timeout")));
 			} else if (worker.isConnected()) {
 				it.remove();
 			}
@@ -56,7 +73,7 @@ public class NIOOutSelector extends AbstractSelector{
 	private Address localAddress;
 		
 	private class ConnectWorker implements Runnable, SelectionHandler {
-		private static final long DEFAULT_TIMEOUT = 10 * 1000;
+		private static final long DEFAULT_TIMEOUT = 30 * 1000;
 		SocketChannel socketChannel;
 		Address address;
 		Connection connection;
@@ -98,7 +115,8 @@ public class NIOOutSelector extends AbstractSelector{
 				socketChannel.register(selector, SelectionKey.OP_CONNECT, ConnectWorker.this);
 			} catch (Throwable e) {
 				try {socketChannel.close();} catch (Exception ignore) {}
-				connectionManager.onConnectionFailed(address);
+                removeWork(this);
+				connectionManager.onConnectionFailed(address, Optional.of(e));
 			}
 		}
 
@@ -106,17 +124,18 @@ public class NIOOutSelector extends AbstractSelector{
 			try {
 				connected = socketChannel.finishConnect();
 				if (!connected) {
-					socketChannel.register(selector, SelectionKey.OP_CONNECT, ConnectWorker.this);
-					log.info("failed to connect :");
-					return;
-				}
+					log.error("FATAL condition: failed to establish remote connection but is this possible? {}", address);
+                    throw new IOException("internal error. finishConnect should throw exception or return true.");
+                }
 				log.debug("connected to: {}", address);
+                deregister();
+				removeWork(ConnectWorker.this);
 				connection = createConnection(socketChannel);
-				
 			} catch (Throwable e) {
-				log.warn("connection worker failed: ", e);
+				log.warn("connection worker failed: " + address.toString(), e);
 				try {socketChannel.close(); } catch (Exception ignore) {}
-				connectionManager.onConnectionFailed(address);
+                removeWork(ConnectWorker.this);
+				connectionManager.onConnectionFailed(address, Optional.of(e));
 			}
 		}
 	}

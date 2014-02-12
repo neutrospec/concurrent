@@ -61,6 +61,7 @@ public class ConnectionManager {
 
 	public void start() throws IOException {
         Thread at = new Thread(acceptSelector, "Accept Selector Thread.");
+        at.start();
         for (int i = 0; i < cpuCount; i++) {
             NIOInSelector sel = new NIOInSelector(this);
             selectors[i] = sel;
@@ -70,8 +71,7 @@ public class ConnectionManager {
         outSelector = new NIOOutSelector(this);
         Thread ot = new Thread(outSelector, "Client Selector Thread");
         ot.start();
-        try {Thread.sleep(2000);} catch (Exception ignore) {}
-        at.start();
+//        try {Thread.sleep(2000);} catch (Exception ignore) {}
 
 		managementSchedule.scheduleWithFixedDelay(new Runnable() {
 			public void run() {
@@ -159,8 +159,8 @@ public class ConnectionManager {
         } catch (IOException ignore) {}
     }
 
-	void onConnectionFailed(Address address) {
-        owner.send(new ConnectionFailed(address.getInetSocketAddress()));
+	void onConnectionFailed(Address address, Optional<Throwable> cause) {
+        owner.send(new ConnectionFailed(address.getInetSocketAddress(), cause));
 	}
 	void onSocketException(Connection connection, Throwable e) {
         Optional<LWActorRef> conActor = connection.getOwner();

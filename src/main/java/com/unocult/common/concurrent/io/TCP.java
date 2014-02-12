@@ -62,10 +62,12 @@ public class TCP {
     public static class Close implements TCPCommand {
 
     }
+    public static class CloseSafe implements TCPCommand {
+
+    }
     public static class Closed implements TCPCommand {
         public final InetSocketAddress remote;
         public final InetSocketAddress local;
-
         public Closed(InetSocketAddress remote, InetSocketAddress local) {
             this.remote = remote;
             this.local = local;
