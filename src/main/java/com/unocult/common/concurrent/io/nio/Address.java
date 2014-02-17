@@ -1,5 +1,7 @@
 package com.unocult.common.concurrent.io.nio;
 
+import com.unocult.common.concurrent.LWActorRef;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -13,7 +15,8 @@ public class Address {
 	private int port;
 	private InetSocketAddress inetSocketAddress;
     private int hash = -1;
-	
+	public Object attach;
+
 	public Address() {
 	}
 	public Address(String host, int port) {

@@ -74,7 +74,7 @@ public class TCPManager extends LWActor {
         if (server.isPresent()) {
             createTCPConnection(connected, server.get().listener);
         } else {
-            Optional<ClientEntry> client = findClient(connected.remote);
+            Optional<ClientEntry> client = findClient(connected.sender);
             if (client.isAbsent()) {
                 connected.connection.close();
                 logger.error("unexpected connection destroyed: [{}] -> [{}]", connected.local, connected.remote);
@@ -86,7 +86,7 @@ public class TCPManager extends LWActor {
     }
 
     protected void connectionFailed(ConnectionFailed connectionFailed) {
-        Optional<ClientEntry> client = findClient(connectionFailed.remote);
+        Optional<ClientEntry> client = findClient(connectionFailed.sender);
         if (client.isAbsent()) {
             logger.error("connection without owner failed: -> [{}]", connectionFailed.remote);
         } else {
@@ -102,7 +102,8 @@ public class TCPManager extends LWActor {
             servers.remove(server);
             logger.info("Server socket closed: {}", message.connection.local);
         } else { */
-            Optional<ClientEntry> client = findClient(message.connection.remote);
+        if (message.connection.getOwner().isPresent()) {
+            Optional<ClientEntry> client = findClient(message.connection.getOwner().get());
             if (client.isPresent()) {
                 logger.warn("Connection connection received unexpected close event: {}", client.get().connect.remote);
                 client.get().actor.send(new TCP.CommandFailed(client.get().connect, Optional.<Throwable>absent()));
@@ -113,12 +114,15 @@ public class TCPManager extends LWActor {
                 entry.tcpConnection.send(new TCP.Closed(message.connection.remote, message.connection.local));
                 logger.debug("connection [{} {}] closed", entry.connection.getConnectionID(), entry.connection.remote);
             }
+        }
         /* } */
     }
     protected void connect(TCP.Connect message) {
         try {
             clients.add(new ClientEntry(sender.get(), message));
-            connectionManager.connect(new Address(message.remote));
+            Address addr = new Address(message.remote);
+            addr.attach = sender.get();
+            connectionManager.connect(addr);
             logger.debug("connecting to: {}", message.remote);
         } catch (Exception e) {
             logger.error("connect error", e);
@@ -133,9 +137,9 @@ public class TCPManager extends LWActor {
         return Optional.absent();
     }
 
-    protected Optional<ClientEntry> findClient(InetSocketAddress remote) {
+    protected Optional<ClientEntry> findClient(LWActorRef remote) {
         for (ClientEntry c: clients) {
-            if (c.connect.remote.equals(remote))
+            if (c.actor == remote)
                 return Optional.of(c);
         }
         return Optional.absent();

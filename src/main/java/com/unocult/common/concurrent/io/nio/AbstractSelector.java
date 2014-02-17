@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import com.unocult.common.concurrent.LWActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,6 +97,11 @@ abstract public class AbstractSelector implements Runnable {
 
 	protected Connection createConnection(SocketChannel channel) throws IOException {
 		Connection connection = connectionManager.createConnection(channel);
+		return connection;
+	}
+
+	protected Connection createConnection(SocketChannel channel, LWActorRef sender) throws IOException {
+		Connection connection = connectionManager.createConnection(channel, sender);
 		return connection;
 	}
 	protected SelectionKey registerOp(Connection connection, int operation) {

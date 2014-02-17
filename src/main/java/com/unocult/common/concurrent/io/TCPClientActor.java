@@ -99,13 +99,12 @@ public abstract class TCPClientActor extends LWActor {
     }
 
     private void closed() {
-        if (connection.isAbsent())
-            return;
         LWActorRef closedConn = sender.get();
         if (closedConn != connection.get()) {
             logger.debug("received unexpected close event");
             return;
         }
+        connecting = Optional.absent();
         connection = Optional.absent();
         closing = Optional.absent();
         onClosed();
@@ -124,6 +123,8 @@ public abstract class TCPClientActor extends LWActor {
                 currentRetry = 0;
                 self.getSystem().scheduleTimer(self, END_OF_SUSPEND, suspendTime, TimeUnit.MILLISECONDS);
             }
+        } else {
+            onClosed();
         }
     }
 

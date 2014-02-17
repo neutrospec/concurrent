@@ -112,6 +112,18 @@ public class ConnectionManager {
      * @return Connection which is unregistered.
      */
 	Connection createConnection(SocketChannel socketChannel) throws IOException {
+        return createConnection(socketChannel, null);
+    }
+
+    /**
+     * create connection with given socket channel.
+     * returned connection is not registered to any read selecctors.
+     * call registerConnection before read/write.
+     *
+     * @param socketChannel accepted/connected SocketChannel
+     * @return Connection which is unregistered.
+     */
+	Connection createConnection(SocketChannel socketChannel, LWActorRef sender) throws IOException {
         try {
             changeSocketOption(socketChannel);
             long nextConnectionID = connectionIDGen.getAndIncrement();
@@ -120,7 +132,7 @@ public class ConnectionManager {
             conn.setSocketReadBuffer(directBufferCache.getDirectByteBuffer(getSocketWriteFragmentSize()));
             connectionList.add(conn);
             // toss Connection to TCP manager.
-            owner.send(new Connected(conn, (InetSocketAddress)socketChannel.getRemoteAddress(), (InetSocketAddress)socketChannel.getLocalAddress()));
+            owner.send(new Connected(conn, (InetSocketAddress)socketChannel.getRemoteAddress(), (InetSocketAddress)socketChannel.getLocalAddress(), sender));
             log.info("connection established - remote: {}", socketChannel.socket().getRemoteSocketAddress());
             return conn;
         } catch (IOException e) {
@@ -160,7 +172,7 @@ public class ConnectionManager {
     }
 
 	void onConnectionFailed(Address address, Optional<Throwable> cause) {
-        owner.send(new ConnectionFailed(address.getInetSocketAddress(), cause));
+        owner.send(new ConnectionFailed(address.getInetSocketAddress(), cause, (LWActorRef) address.attach));
 	}
 	void onSocketException(Connection connection, Throwable e) {
         Optional<LWActorRef> conActor = connection.getOwner();

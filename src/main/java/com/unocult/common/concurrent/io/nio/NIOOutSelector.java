@@ -13,6 +13,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.unocult.common.base.Optional;
+import com.unocult.common.concurrent.LWActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,7 +131,7 @@ public class NIOOutSelector extends AbstractSelector{
 				log.debug("connected to: {}", address);
                 deregister();
 				removeWork(ConnectWorker.this);
-				connection = createConnection(socketChannel);
+				connection = createConnection(socketChannel, (LWActorRef) address.attach);
 			} catch (Throwable e) {
 				log.warn("connection worker failed: " + address.toString(), e);
 				try {socketChannel.close(); } catch (Exception ignore) {}
