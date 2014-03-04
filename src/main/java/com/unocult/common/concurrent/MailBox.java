@@ -29,7 +29,7 @@ class MailBox {
     private LinkedList<Message> mailBox = new LinkedList<Message>();
 
     private Optional<LWActorRef> owner;
-    private ActorProperty props;
+    protected final ActorProperty props;
 
     public MailBox(ActorProperty props, ConcurrentSystem system) {
         this.system = system;
@@ -174,9 +174,10 @@ class MailBox {
         stateLock.lock();
         try {
             mailBoxState = State.Stop;
-            if (getOwner().isPresent())
+            if (getOwner().isPresent()) {
                 getOwner().get().shutdown();
-            // TODO: unregister from System?
+                system.releaseActor(getOwner().get());
+            }
         } catch (Throwable throwable) {
             logger.warn("stopping mailbox error", throwable);
         } finally {

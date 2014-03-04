@@ -132,6 +132,20 @@ public class ConcurrentSystem {
         return _actorOf(null, klass, args);
     }
 
+    protected void releaseActor(LWActorRef actor) {
+        lock.lock();
+        try {
+            String name = actor.mailBox.props.getName();
+            LWActorRef ref = actors.get(name);
+            if (ref != null && actor == ref) {
+                actors.remove(name);
+                rootActors.remove(actor);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public synchronized void shutdown() {
         if (running) {
             running = false;
