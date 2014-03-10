@@ -105,6 +105,7 @@ public class TCPConnection extends LWActor {
     private void closed(TCP.Closed message) {
         if (!sendToListener(message) && !listenerDead)
             logger.warn("unregistered connection closed");
+        self.stop();
     }
     protected boolean sendToListener(Object message) {
         if (listener.isPresent()) {
