@@ -12,7 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 class MailBox {
     private static final Logger logger = LoggerFactory.getLogger(MailBox.class);
-    ConcurrentSystem system;
+    final ConcurrentSystem system;
     private int bound = 10000;
 
     enum State {
@@ -20,13 +20,13 @@ class MailBox {
     }
     private int offset = 0;
 
-    private Lock stateLock = new ReentrantLock();
-    private Condition consumedCond = stateLock.newCondition();
+    private final Lock stateLock = new ReentrantLock();
+    private final Condition consumedCond = stateLock.newCondition();
 
     @GuardedBy("stateLock")
     private State mailBoxState = State.Empty;
     @GuardedBy("stateLock")
-    private LinkedList<Message> mailBox = new LinkedList<Message>();
+    private final LinkedList<Message> mailBox = new LinkedList<Message>();
 
     private Optional<LWActorRef> owner;
     protected final ActorProperty props;

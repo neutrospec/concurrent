@@ -11,9 +11,9 @@ public class ActorProperty {
     private static final Logger logger = LoggerFactory.getLogger(ActorProperty.class);
     protected String name;
     private final UUID id;
-    private Object[] args = null;
-    private Class<? extends LWActor> klass;
-    private Optional<LWActorRef> parent = Optional.absent();
+    private final Object[] args;
+    private final Class<? extends LWActor> klass;
+    private final Optional<LWActorRef> parent;
 
     public ActorProperty(String name, Class<? extends LWActor> klass) {
         this(name, klass, null);
@@ -31,10 +31,6 @@ public class ActorProperty {
 
     public Optional<LWActorRef> getParent() {
         return parent;
-    }
-
-    public void setParent(Optional<LWActorRef> parent) {
-        this.parent = parent;
     }
 
     public String getName() {

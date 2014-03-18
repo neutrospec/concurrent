@@ -13,9 +13,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public class LWActorRef {
     private static final Logger logger = LoggerFactory.getLogger(LWActorRef.class);
 
-    private ConcurrentSystem system = null;
-    protected MailBox mailBox;
-    private ActorProperty props;
+    private final ConcurrentSystem system;
+    protected final MailBox mailBox;
+    private final ActorProperty props;
 
     protected Optional<LWActorRef> sender = Optional.absent();
     private Optional<LWActor> actorImpl = Optional.absent();
@@ -24,12 +24,13 @@ public class LWActorRef {
     private final Lock watcherLock = new ReentrantLock();
 
     @GuardedBy("childrenLock")
-    private List<LWActorRef> children = new LinkedList<LWActorRef>();
+    private final List<LWActorRef> children = new LinkedList<LWActorRef>();
 
     @GuardedBy("watcherLock")
     private final List<LWActorRef> watchers = new LinkedList<LWActorRef>();
 
     protected Optional<LWActorRef> parent = Optional.absent();
+    private final List<LWActorRef> watching = new LinkedList<LWActorRef>();
 
     // represent current operating LWActorRef
     protected static ThreadLocal<LWActorRef> callingActorRef = new ThreadLocal<LWActorRef>();
@@ -84,15 +85,24 @@ public class LWActorRef {
     }
 
     public void watch(LWActorRef target) {
-        target.watch_(this);
+        if (!watching.contains(target)) {
+            watching.add(target);
+            target.watch_(this);
+        }
     }
 
     public void unwatch(LWActorRef target) {
-        target.unwatch_(this);
+        if (watching.contains(target)) {
+            watching.remove(target);
+            target.unwatch_(this);
+        }
     }
 
-    void setSystem(ConcurrentSystem system) {
-        this.system = system;
+    private void unwatchAll() {
+        for (LWActorRef w: watching) {
+            w.unwatch_(this);
+        }
+        watching.clear();
     }
 
     protected void addChildren(LWActorRef child) {
@@ -131,6 +141,7 @@ public class LWActorRef {
     protected void shutdown() {
         sendTerminateEventToWatchers();
         callDoPostOnActorImpl();
+        unwatchAll();
         shutdownAllChildActors();
         if (parent.isPresent()) {
             parent.get().removeChild(this);
