@@ -51,6 +51,9 @@ public class LWActorRef {
             callingActorRef.set(this);
             // error processing point!!!
             actorImpl.get().setSender(sender);
+            if (message instanceof ConcurrentSystem.Terminated) {
+                unwatch(((ConcurrentSystem.Terminated) message).actor);
+            }
             result = actorImpl.get().processMessage(message, sender);
             callingActorRef.remove();
         } catch (Exception e) {
